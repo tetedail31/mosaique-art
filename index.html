@@ -447,7 +447,7 @@ $('go').addEventListener('click', async () => {
       status.textContent = m.message; btn.disabled = false; worker.terminate();
     } else if (m.phase === 'encode') {
       fill.style.width = '97%';
-      status.textContent = 'Préparation du rendu haute résolution…';
+      status.textContent = 'Rendu haute résolution : ' + (m.step || 'en cours');
     } else if (m.phase === 'done') {
       fill.style.width = '100%';
       const prev = $('out');

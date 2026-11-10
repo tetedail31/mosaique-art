@@ -115,22 +115,31 @@ self.onmessage = async (ev) => {
   }
 
   /* ---- rendu final : le canvas reste dans le worker, la page ne reçoit qu'un aperçu ---- */
-  post({ phase: 'encode', done: 0, total: 1 });
-  const full = new OffscreenCanvas(W, H);
-  const fctx = full.getContext('2d');
-  fctx.putImageData(new ImageData(out, W, H), 0, 0);
-  self.__canvas = full;
+  post({ phase: 'encode', step: 'buffer prêt' });
+  let preview;
+  try {
+    const full = new OffscreenCanvas(W, H);
+    const fctx = full.getContext('2d');
+    fctx.putImageData(new ImageData(out, W, H), 0, 0);
+    self.__canvas = full;
+    post({ phase: 'encode', step: 'canvas peint' });
 
-  const pw = Math.min(1100, W), ph = Math.max(1, Math.round(H * pw / W));
-  const pv = new OffscreenCanvas(pw, ph);
-  const pctx = pv.getContext('2d');
-  pctx.imageSmoothingEnabled = true;
-  pctx.imageSmoothingQuality = 'high';
-  pctx.drawImage(full, 0, 0, pw, ph);
-  const preview = pv.transferToImageBitmap();
+    const pw = Math.min(1100, W), ph = Math.max(1, Math.round(H * pw / W));
+    const pv = new OffscreenCanvas(pw, ph);
+    const pctx = pv.getContext('2d');
+    pctx.imageSmoothingEnabled = true;
+    pctx.imageSmoothingQuality = 'high';
+    pctx.drawImage(full, 0, 0, pw, ph);
+    preview = pv.transferToImageBitmap();
+    post({ phase: 'encode', step: 'aperçu prêt' });
+  } catch (e) {
+    post({ phase: 'error', message: 'rendu final : ' + e.message });
+    return;
+  }
 
   post({
-    phase: 'done', width: W, height: H, previewW: pw, previewH: ph,
+    phase: 'done', width: W, height: H, previewW: Math.min(1100, W),
+    previewH: Math.max(1, Math.round(H * Math.min(1100, W) / W)),
     distinct: sol.distinct, reused: sol.reused, kept, failed, cells: cols * rows,
     preview,
   }, [preview]);
