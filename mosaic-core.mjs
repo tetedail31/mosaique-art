@@ -111,6 +111,114 @@ export function solve(targets, pool, opts = {}) {
   return { picks, distinct, reused };
 }
 
+/* ---------- export impression : métadonnées de résolution ---------- */
+
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+
+export function crc32(bytes, start = 0, end = bytes.length) {
+  let c = 0xFFFFFFFF;
+  for (let i = start; i < end; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+function u32(n) {
+  return Uint8Array.of((n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255);
+}
+
+function chunk(type, data) {
+  const t = new Uint8Array(4);
+  for (let i = 0; i < 4; i++) t[i] = type.charCodeAt(i);
+  const body = new Uint8Array(4 + data.length);
+  body.set(t, 0); body.set(data, 4);
+  const crc = crc32(body);
+  return Uint8Array.from([...u32(data.length), ...body, ...u32(crc)]);
+}
+
+/**
+ * Ajoute (ou remplace) à un PNG les chunks pHYs (résolution en pixels par mètre)
+ * et sRGB, sans quoi les imprimeurs considèrent le fichier à 72 dpi.
+ */
+export function pngWithDpi(bytes, dpi) {
+  const src = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  const sig = [137, 80, 78, 71, 13, 10, 26, 10];
+  for (let i = 0; i < 8; i++) if (src[i] !== sig[i]) throw new Error('pas un PNG');
+  const ppu = Math.round(dpi / 0.0254);
+  const phys = chunk('pHYs', Uint8Array.from([...u32(ppu), ...u32(ppu), 1]));
+  const srgb = chunk('sRGB', Uint8Array.of(0));
+
+  const out = [];
+  out.push(src.subarray(0, 8));
+  let p = 8;
+  let inserted = false;
+  while (p < src.length) {
+    const len = (src[p] << 24 | src[p + 1] << 16 | src[p + 2] << 8 | src[p + 3]) >>> 0;
+    const type = String.fromCharCode(src[p + 4], src[p + 5], src[p + 6], src[p + 7]);
+    const end = p + 12 + len;
+    if (type === 'pHYs') { p = end; continue; }   // on remplace l'existant
+    out.push(src.subarray(p, end));
+    if (type === 'IHDR' && !inserted) { out.push(phys, srgb); inserted = true; }
+    p = end;
+  }
+  if (!inserted) throw new Error('IHDR introuvable');
+  const total = out.reduce((a, b) => a + b.length, 0);
+  const res = new Uint8Array(total);
+  let o = 0;
+  for (const b of out) { res.set(b, o); o += b.length; }
+  return res;
+}
+
+/** Force la densité dans l'entête JFIF d'un JPEG (unités = dpi). */
+export function jpegWithDpi(bytes, dpi) {
+  const src = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  if (src[0] !== 0xFF || src[1] !== 0xD8) throw new Error('pas un JPEG');
+  const res = new Uint8Array(src);
+  let p = 2;
+  while (p + 4 <= res.length && res[p] === 0xFF) {
+    const marker = res[p + 1];
+    if (marker === 0xDA || marker === 0xD9) break;      // début des données / fin
+    const len = (res[p + 2] << 8) | res[p + 3];
+    if (marker === 0xE0) {                               // APP0 JFIF
+      res[p + 11] = 1;                                   // unités = points par pouce
+      res[p + 12] = (dpi >> 8) & 255; res[p + 13] = dpi & 255;
+      res[p + 14] = (dpi >> 8) & 255; res[p + 15] = dpi & 255;
+      return res;
+    }
+    p += 2 + len;
+  }
+  // pas d'APP0 : on l'insère juste après SOI
+  const app0 = Uint8Array.from([0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00,
+    0x01, 0x01, 0x01, (dpi >> 8) & 255, dpi & 255, (dpi >> 8) & 255, dpi & 255, 0x00, 0x00]);
+  const out = new Uint8Array(src.length + app0.length);
+  out.set(src.subarray(0, 2), 0);
+  out.set(app0, 2);
+  out.set(src.subarray(2), 2 + app0.length);
+  return out;
+}
+
+/** Lit la résolution déclarée d'un PNG (pour les tests et le diagnostic). */
+export function readPngDpi(bytes) {
+  const src = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  let p = 8;
+  while (p < src.length) {
+    const len = (src[p] << 24 | src[p + 1] << 16 | src[p + 2] << 8 | src[p + 3]) >>> 0;
+    const type = String.fromCharCode(src[p + 4], src[p + 5], src[p + 6], src[p + 7]);
+    if (type === 'pHYs') {
+      const ppu = (src[p + 8] << 24 | src[p + 9] << 16 | src[p + 10] << 8 | src[p + 11]) >>> 0;
+      return Math.round(ppu * 0.0254 * 100) / 100;
+    }
+    p += 12 + len;
+  }
+  return null;
+}
+
 /**
  * Compose le rendu : transfert moyenne/écart-type par case, puis mélange avec le fragment brut.
  * tiles : Array<Uint8ClampedArray(tilePx*tilePx*4)> ; means/stds : Array<[3]> par fragment.

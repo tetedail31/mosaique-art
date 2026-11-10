@@ -75,4 +75,67 @@ let threw = false;
 try { solve(new Float32Array([1, 1, 1]), new Float32Array([]), {}); } catch (e) { threw = true; }
 ok('pool vide -> erreur', threw);
 
+/* 9. export impression : résolution inscrite dans le fichier */
+import { crc32, pngWithDpi, jpegWithDpi, readPngDpi } from '../mosaic-core.mjs';
+import zlib from 'node:zlib';
+
+ok('crc32 de référence (0xCBF43926)', crc32(new TextEncoder().encode('123456789')) === 0xCBF43926);
+
+function makePng(withPhys) {
+  const sig = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  const raw = Buffer.alloc(4 * 3, 0);            // 1 ligne, 3 octets par pixel + filtre
+  for (let i = 0; i < raw.length; i++) raw[i] = i % 4 === 0 ? 0 : 200;
+  const mk = (type, data) => {
+    const t = Buffer.from(type, 'ascii');
+    const body = Buffer.concat([t, Buffer.from(data)]);
+    const b = Buffer.alloc(4); b.writeUInt32BE(data.length);
+    const c = Buffer.alloc(4); c.writeUInt32BE(crc32(body));
+    return Buffer.concat([b, body, c]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(1, 0); ihdr.writeUInt32BE(1, 4);
+  ihdr[8] = 8; ihdr[9] = 2; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
+  const parts = [sig, mk('IHDR', ihdr)];
+  if (withPhys) {
+    const ph = Buffer.alloc(9); ph.writeUInt32BE(2835, 0); ph.writeUInt32BE(2835, 4); ph[8] = 1;
+    parts.push(mk('pHYs', ph));
+  }
+  parts.push(mk('IDAT', zlib.deflateSync(raw)), mk('IEND', Buffer.alloc(0)));
+  return new Uint8Array(Buffer.concat(parts));
+}
+
+const base = makePng(false);
+const tagged = pngWithDpi(base, 300);
+near(readPngDpi(tagged), 300, 0.5, 'PNG 300 dpi relu');
+ok('PNG reste valide (IEND présent)', String.fromCharCode(...tagged.slice(-8, -4)) === 'IEND');
+ok('un seul pHYs', tagged.length && (() => {
+  let n = 0, p = 8;
+  while (p < tagged.length) {
+    const len = (tagged[p] << 24 | tagged[p + 1] << 16 | tagged[p + 2] << 8 | tagged[p + 3]) >>> 0;
+    if (String.fromCharCode(tagged[p + 4], tagged[p + 5], tagged[p + 6], tagged[p + 7]) === 'pHYs') n++;
+    p += 12 + len;
+  }
+  return n;
+})() === 1);
+const retagged = pngWithDpi(pngWithDpi(base, 300), 240);
+near(readPngDpi(retagged), 240, 0.5, 'PNG repassé à 240 dpi sans doublon');
+
+function makeJpeg(withApp0) {
+  const soi = Uint8Array.from([0xFF, 0xD8]);
+  const app0 = Uint8Array.from([0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00,
+    0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00]);     // unités = 0, densité 1
+  const sos = Uint8Array.from([0xFF, 0xDA, 0x00, 0x08, 1, 2, 3, 4, 5, 6]);
+  const eoi = Uint8Array.from([0xFF, 0xD9]);
+  return new Uint8Array([...(withApp0 ? [...soi, ...app0] : [...soi]), ...sos, ...eoi]);
+}
+
+const j1 = jpegWithDpi(makeJpeg(true), 300);
+ok('JPEG : unités = dpi', j1[13] === 1);
+ok('JPEG : densité X = 300', (j1[14] << 8 | j1[15]) === 300);
+ok('JPEG : densité Y = 300', (j1[16] << 8 | j1[17]) === 300);
+const j2 = jpegWithDpi(makeJpeg(false), 240);
+ok('JPEG sans APP0 : en-tête inséré', j2[2] === 0xFF && j2[3] === 0xE0);
+ok('JPEG sans APP0 : densité X = 240', (j2[14] << 8 | j2[15]) === 240);
+ok('JPEG : SOS préservé', j2.includes(0xDA));
+
 console.log(`\n${pass} assertions passées`);

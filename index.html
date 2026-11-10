@@ -94,23 +94,72 @@
   </section>
 
   <section class="card">
-    <h2>3 · Réglages</h2>
-    <label class="field"><span>Largeur du fichier de sortie</span>
-      <select id="outW">
-        <option value="1200">1 200 px — aperçu rapide</option>
-        <option value="1800" selected>1 800 px — bon compromis</option>
-        <option value="2600">2 600 px — impression A3</option>
-        <option value="3600">3 600 px — impression A2</option>
-      </select>
-    </label>
-    <label class="field"><span>Taille des photos dans la mosaïque</span>
-      <select id="tilePx">
-        <option value="32">32 px — très fin, beaucoup de cases</option>
-        <option value="40">40 px — fin</option>
-        <option value="48" selected>48 px — équilibré</option>
-        <option value="64">64 px — photos bien lisibles</option>
-      </select>
-    </label>
+    <h2>3 · Format de sortie</h2>
+    <div class="row" style="margin-bottom:12px">
+      <button class="ghost" id="modeScreen" aria-pressed="false">Écran</button>
+      <button class="ghost" id="modePrint" aria-pressed="true">Impression</button>
+    </div>
+
+    <div id="panelPrint">
+      <label class="field"><span>Format d'impression</span>
+        <select id="printSize">
+          <option value="21x29.7">A4 · 21 × 29,7 cm</option>
+          <option value="29.7x42">A3 · 29,7 × 42 cm</option>
+          <option value="42x59.4" selected>A2 · 42 × 59,4 cm</option>
+          <option value="50x70">50 × 70 cm</option>
+          <option value="70x70">70 × 70 cm</option>
+          <option value="70x100">70 × 100 cm</option>
+          <option value="100x100">100 × 100 cm</option>
+          <option value="100x150">100 × 150 cm</option>
+          <option value="custom">Format personnalisé…</option>
+        </select>
+      </label>
+      <div class="row hidden" id="customRow">
+        <label class="field" style="flex:1;min-width:120px"><span>Largeur (cm)</span>
+          <input type="number" id="cw" value="60" min="10" max="200" step="1" style="width:100%;background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:10px">
+        </label>
+        <label class="field" style="flex:1;min-width:120px"><span>Hauteur (cm)</span>
+          <input type="number" id="ch" value="80" min="10" max="250" step="1" style="width:100%;background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:10px">
+        </label>
+      </div>
+      <label class="field"><span>Résolution d'impression</span>
+        <select id="dpi">
+          <option value="240">240 dpi — toile, grand format</option>
+          <option value="300" selected>300 dpi — standard imprimeur</option>
+          <option value="360">360 dpi — tirage fin</option>
+        </select>
+      </label>
+      <label class="field"><span>Chaque photo mesure, sur le papier</span>
+        <select id="mm">
+          <option value="10">10 mm — compact, beaucoup de photos</option>
+          <option value="12">12 mm — lisible de près</option>
+          <option value="15" selected>15 mm — confortable</option>
+          <option value="20">20 mm — chaque photo bien visible</option>
+          <option value="25">25 mm — très lisible, moins de cases</option>
+        </select>
+      </label>
+      <div class="note" id="printInfo">—</div>
+    </div>
+
+    <div id="panelScreen" class="hidden">
+      <label class="field"><span>Largeur du fichier de sortie</span>
+        <select id="outW">
+          <option value="1200">1 200 px — aperçu rapide</option>
+          <option value="1800" selected>1 800 px — bon compromis</option>
+          <option value="2600">2 600 px — impression A3</option>
+          <option value="3600">3 600 px — impression A2</option>
+        </select>
+      </label>
+      <label class="field"><span>Taille des photos dans la mosaïque</span>
+        <select id="tilePx">
+          <option value="32">32 px — très fin, beaucoup de cases</option>
+          <option value="40">40 px — fin</option>
+          <option value="48" selected>48 px — équilibré</option>
+          <option value="64">64 px — photos bien lisibles</option>
+        </select>
+      </label>
+    </div>
+
     <label class="field"><span>Correction des couleurs : <b id="strengthVal">90 %</b></span>
       <input type="range" id="strength" min="0" max="100" value="90" step="5">
     </label>
@@ -142,6 +191,7 @@
 </div>
 
 <script type="module">
+import { pngWithDpi, jpegWithDpi } from './mosaic-core.mjs';
 const WORKS = [
   { slug:'mona-lisa',    title:'La Joconde',                meta:'Léonard de Vinci · 1503' },
   { slug:'starry-night', title:'La Nuit étoilée',           meta:'Van Gogh · 1889' },
@@ -237,61 +287,125 @@ $('targetFile').addEventListener('change', e => {
 
 /* ---------- réglages ---------- */
 $('strength').addEventListener('input', e => { $('strengthVal').textContent = e.target.value + ' %'; });
-['outW', 'tilePx', 'unique'].forEach(id =>
+['outW', 'tilePx', 'unique', 'printSize', 'dpi', 'mm', 'cw', 'ch'].forEach(id =>
   $(id).addEventListener('change', () => { updateEstimate(); refreshGo(); }));
+['cw', 'ch'].forEach(id => $(id).addEventListener('input', () => { updateEstimate(); refreshGo(); }));
 
-function geometry() {
-  const outW = +$('outW').value, tilePx = +$('tilePx').value;
-  const cols = Math.floor(outW / tilePx);
-  return { outW, tilePx, cols };
+const FORMATS = {
+  '21x29.7': [21, 29.7], '29.7x42': [29.7, 42], '42x59.4': [42, 59.4],
+  '50x70': [50, 70], '70x70': [70, 70], '70x100': [70, 100],
+  '100x100': [100, 100], '100x150': [100, 150],
+};
+
+function setMode(mode) {
+  state.mode = mode;
+  $('panelPrint').classList.toggle('hidden', mode !== 'print');
+  $('panelScreen').classList.toggle('hidden', mode !== 'screen');
+  $('modePrint').setAttribute('aria-pressed', String(mode === 'print'));
+  $('modeScreen').setAttribute('aria-pressed', String(mode === 'screen'));
+  $('modePrint').style.borderColor = mode === 'print' ? 'var(--accent)' : 'var(--line)';
+  $('modeScreen').style.borderColor = mode === 'screen' ? 'var(--accent)' : 'var(--line)';
+  updateEstimate(); refreshGo();
+}
+$('modePrint').addEventListener('click', () => setMode('print'));
+$('modeScreen').addEventListener('click', () => setMode('screen'));
+$('printSize').addEventListener('change', () => {
+  $('customRow').classList.toggle('hidden', $('printSize').value !== 'custom');
+});
+
+function printCm() {
+  const key = $('printSize').value;
+  if (key === 'custom') return [Math.max(10, +$('cw').value || 60), Math.max(10, +$('ch').value || 80)];
+  return FORMATS[key] || FORMATS['42x59.4'];
 }
 
-/** Aperçu du nombre de cases et de la pression sur le jeu de photos. */
-function updateEstimate() {
-  const { cols } = geometry();
+/**
+ * Géométrie de sortie.
+ * Impression : la grille est imposée par le format et la taille de photo sur le papier ;
+ * le tableau est recadré pour remplir la feuille. Écran : la largeur en pixels impose la grille.
+ */
+function geometry() {
+  if (state.mode === 'print') {
+    const [wcm, hcm] = printCm();
+    const dpi = +$('dpi').value, mm = +$('mm').value;
+    const tilePx = Math.max(8, Math.round(mm / 25.4 * dpi));
+    const Wpx = Math.round(wcm / 2.54 * dpi), Hpx = Math.round(hcm / 2.54 * dpi);
+    const cols = Math.floor(Wpx / tilePx), rows = Math.floor(Hpx / tilePx);
+    return { mode: 'print', dpi, mm, tilePx, cols, rows, Wpx, Hpx, wcm, hcm,
+             W: cols * tilePx, H: rows * tilePx };
+  }
+  const outW = +$('outW').value, tilePx = +$('tilePx').value;
   const aspect = state.targetAspect || 1.25;
+  const cols = Math.floor(outW / tilePx);
   const rows = Math.max(1, Math.round(cols / aspect));
-  const cells = cols * rows;
+  return { mode: 'screen', dpi: 0, mm: 0, tilePx, cols, rows, W: cols * tilePx, H: rows * tilePx };
+}
+
+/** Aperçu du nombre de cases, de la taille papier et de la mémoire nécessaire. */
+function updateEstimate() {
+  const g = geometry();
+  const cells = g.cols * g.rows;
   const n = state.files.length;
   const el = $('estimate');
   el.classList.toggle('hidden', !(n || state.target));
+  if (g.mode === 'print') {
+    const cmW = (g.W / g.dpi * 2.54), cmH = (g.H / g.dpi * 2.54);
+    const mb = Math.round((g.W * g.H * 4 * 2) / 1048576);
+    const heavy = g.W * g.H > 130e6 ? ' · trop lourd, réduis le format ou la résolution'
+      : g.W * g.H > 60e6 ? ' · gros fichier, garde l\'onglet actif' : '';
+    $('printInfo').innerHTML =
+      `<b>${g.W} × ${g.H} px</b> à ${g.dpi} dpi → ${cmW.toFixed(1)} × ${cmH.toFixed(1)} cm<br>` +
+      `grille ${g.cols} × ${g.rows} = <b>${cells}</b> cases · chaque photo ${(g.tilePx / g.dpi * 25.4).toFixed(1)} mm<br>` +
+      `≈ ${mb} Mo de mémoire pendant le calcul${heavy}`;
+    $('printInfo').style.borderLeftColor = (g.W * g.H > 60e6) ? 'var(--warn)' : 'var(--accent)';
+  }
   if (!n && !state.target) { el.textContent = ''; return; }
-  if (!state.target) { el.innerHTML = `<b>${n}</b> photos · grille à définir`; return; }
+  if (!state.target) { el.innerHTML = `<b>${n}</b> photos · grille à définir`; el.style.color = 'var(--dim)'; return; }
   const missing = cells - n;
   let hint = '';
   if (n && missing > 0) {
-    const aspect = state.targetAspect || 1.25;
-    const { outW } = geometry();
-    const need = Math.max(1, Math.round(Math.sqrt(n * aspect))); // colonnes tiennent dans n photos
-    const fit = Math.floor(outW / need);
-    const options = [32, 40, 48, 64];
-    const sugg = options.find(o => o >= fit);
-    hint = sugg === undefined
-      ? ' → ajoute des photos'
-      : (sugg !== geometry().tilePx ? ` → tuile ${sugg} px` : ' → ajoute des photos');
+    if (g.mode === 'print') {
+      const bigger = [10, 12, 15, 20, 25].find(mm => {
+        const t = Math.round(mm / 25.4 * g.dpi);
+        return Math.floor(g.W / t) * Math.floor(g.H / t) <= n;
+      });
+      hint = bigger ? ` → photo de ${bigger} mm` : ' → ajoute des photos';
+    } else {
+      const need = Math.max(1, Math.round(Math.sqrt(n * (state.targetAspect || 1.25))));
+      const fit = Math.floor(g.W / need);
+      const options = [32, 40, 48, 64];
+      const sugg = options.find(o => o >= fit);
+      hint = sugg === undefined ? ' → ajoute des photos'
+        : (sugg !== g.tilePx ? ` → tuile ${sugg} px` : ' → ajoute des photos');
+    }
   }
   el.innerHTML = n
-    ? `grille ${cols} × ${rows} = <b>${cells}</b> cases pour <b>${n}</b> photos` +
+    ? `grille ${g.cols} × ${g.rows} = <b>${cells}</b> cases pour <b>${n}</b> photos` +
       (missing > 0 ? ` · ${missing} réutilisation${missing > 1 ? 's' : ''}${hint}` : ' · toutes distinctes')
-    : `grille ${cols} × ${rows} = <b>${cells}</b> cases`;
+    : `grille ${g.cols} × ${g.rows} = <b>${cells}</b> cases`;
   el.style.color = missing > 0 ? 'var(--warn)' : 'var(--dim)';
 }
 
 function refreshGo() {
-  const ok = state.files.length > 0 && state.target;
+  const g = geometry();
+  const tooHeavy = g.W * g.H > 130e6;
+  const ok = state.files.length > 0 && state.target && !tooHeavy;
   const go = $('go');
   go.disabled = !ok;
-  const { cols } = geometry();
-  const rows = Math.max(1, Math.round(cols / (state.targetAspect || 1.25)));
-  go.textContent = ok
-    ? `Générer la mosaïque · ${cols} × ${rows} cases`
+  go.textContent = tooHeavy ? 'Format trop lourd pour un navigateur'
+    : ok ? `Générer la mosaïque · ${g.cols} × ${g.rows} cases${g.mode === 'print' ? ` · ${g.dpi} dpi` : ''}`
     : (!state.files.length ? 'Ajoute tes photos' : 'Choisis un tableau');
 }
 
 /* ---------- génération ---------- */
 $('go').addEventListener('click', async () => {
-  const { outW, tilePx, cols } = geometry();
+  const g = geometry();
+  const { tilePx, cols, rows, W, H } = g;
   const btn = $('go'), bar = $('bar'), fill = bar.querySelector('i'), status = $('status');
+  if (W * H > 130e6) {
+    status.textContent = 'Format trop lourd : réduis la taille, le dpi ou la taille de photo.';
+    return;
+  }
   btn.disabled = true; bar.style.display = 'block'; fill.style.width = '2%';
   status.textContent = 'Lecture du tableau…';
 
@@ -302,29 +416,33 @@ $('go').addEventListener('click', async () => {
     status.textContent = 'Impossible de lire le tableau sélectionné.';
     btn.disabled = false; return;
   }
-  const rows = Math.max(1, Math.round(cols * img.naturalHeight / img.naturalWidth));
-  const W = cols * tilePx, H = rows * tilePx;
   const off = new OffscreenCanvas(W, H);
   const octx = off.getContext('2d', { willReadFrequently: true });
-  octx.drawImage(img, 0, 0, W, H);
-  const targetPixels = octx.getImageData(0, 0, W, H).data;
-
-  const cells = cols * rows;
-  if (cells > state.files.length * 6) {
-    status.textContent = `${cells} cases pour ${state.files.length} photos : les fragments seront très étirés. Réduis la taille de tuile ou ajoute des photos.`;
+  if (g.mode === 'print') {
+    // impression : on remplit la feuille en recadrant au centre, jamais en déformant
+    const sr = img.naturalWidth / img.naturalHeight, dr = W / H;
+    let sw = img.naturalWidth, sh = img.naturalHeight, sx = 0, sy = 0;
+    if (sr > dr) { sw = Math.round(img.naturalHeight * dr); sx = Math.round((img.naturalWidth - sw) / 2); }
+    else { sh = Math.round(img.naturalWidth / dr); sy = Math.round((img.naturalHeight - sh) / 2); }
+    octx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
+  } else {
+    octx.drawImage(img, 0, 0, W, H);
   }
+  const targetPixels = octx.getImageData(0, 0, W, H).data;
 
   const worker = new Worker('./worker.mjs', { type: 'module' });
   const started = performance.now();
   worker.onmessage = (ev) => {
     const m = ev.data;
     if (m.phase === 'decode') {
-      const pct = 2 + 88 * (m.done / m.total);
-      fill.style.width = pct.toFixed(1) + '%';
-      status.textContent = `Préparation des photos : ${m.done} / ${m.total}` + (m.failed ? ` · ${m.failed} ignorée(s)` : '');
-    } else if (m.phase === 'solve' || m.phase === 'compose') {
-      fill.style.width = m.phase === 'solve' ? '92%' : '96%';
-      status.textContent = m.phase === 'solve' ? 'Appariement des couleurs…' : 'Assemblage…';
+      fill.style.width = (2 + 46 * (m.done / m.total)).toFixed(1) + '%';
+      status.textContent = `Analyse des photos : ${m.done} / ${m.total}` + (m.failed ? ` · ${m.failed} ignorée(s)` : '');
+    } else if (m.phase === 'solve') {
+      fill.style.width = '50%';
+      status.textContent = 'Appariement des couleurs…';
+    } else if (m.phase === 'compose') {
+      fill.style.width = (52 + 46 * (m.done / 100)).toFixed(1) + '%';
+      status.textContent = `Assemblage haute résolution : ${m.done} % · ${m.photos} photos à décoder`;
     } else if (m.phase === 'error') {
       status.textContent = m.message; btn.disabled = false; worker.terminate();
     } else if (m.phase === 'done') {
@@ -333,13 +451,20 @@ $('go').addEventListener('click', async () => {
       const canvas = $('out');
       canvas.width = m.width; canvas.height = m.height;
       canvas.getContext('2d').putImageData(data, 0, 0);
+      state.lastG = g;
       $('resultCard').classList.add('result');
       $('resultCard').style.display = 'block';
       const secs = ((performance.now() - started) / 1000).toFixed(1);
-      const note = m.reused ? ` · ${m.reused} réutilisation(s), pas assez de photos pour ${m.cells} cases` : '';
-      status.textContent = `${m.width} × ${m.height} px · ${m.cells} cases · ${m.distinct} photos utilisées${note} · ${secs} s`;
-      $('sizes').textContent = `Impression à 300 dpi : ${(m.width / 300 * 2.54).toFixed(0)} × ${(m.height / 300 * 2.54).toFixed(0)} cm. ` +
-        `Chaque photo mesure ${tilePx} px à l'écran, soit ${(tilePx / 300 * 25.4).toFixed(1)} mm sur le papier.`;
+      const note = m.reused ? ` · ${m.reused} réutilisation(s)` : '';
+      status.textContent = `${m.width} × ${m.height} px · ${m.cells} cases · ${m.distinct} photos distinctes${note} · ${secs} s`;
+      if (g.mode === 'print') {
+        $('sizes').innerHTML = `Fichier à <b>${g.dpi} dpi</b> : ${(m.width / g.dpi * 2.54).toFixed(1)} × ${(m.height / g.dpi * 2.54).toFixed(1)} cm ` +
+          `(format demandé ${g.wcm} × ${g.hcm} cm). Chaque photo mesure ${(tilePx / g.dpi * 25.4).toFixed(1)} mm sur le papier.<br>` +
+          `La résolution est inscrite dans le fichier : l'imprimeur n'a rien à régler.`;
+      } else {
+        $('sizes').textContent = `Image écran : ${m.width} × ${m.height} px. ` +
+          `Pour l'impression, passe en mode Impression et choisis ton format.`;
+      }
       $('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
       btn.disabled = false; worker.terminate();
     }
@@ -349,7 +474,7 @@ $('go').addEventListener('click', async () => {
     btn.disabled = false;
   };
   worker.postMessage({
-    files: state.files, targetPixels, targetW: W, tilePx, cols, rows,
+    files: state.files, targetPixels, tilePx, cols, rows,
     unique: $('unique').checked, strength: +$('strength').value / 100, blend: 0.25,
   });
 });
@@ -364,30 +489,56 @@ function loadImage(src) {
 }
 
 /* ---------- téléchargements ---------- */
-function download(blob) {
+function download(blob, name) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = state.outBlobName;
+  a.download = name;
   a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  setTimeout(() => URL.revokeObjectURL(a.href), 8000);
 }
 
-$('dlPng').addEventListener('click', () => $('out').toBlob(b => download(b), 'image/png'));
+function currentDpi() {
+  return (state.lastG && state.lastG.mode === 'print') ? state.lastG.dpi : 300;
+}
+
+$('dlPng').addEventListener('click', () => {
+  const dpi = currentDpi();
+  $('out').toBlob(async (b) => {
+    if (!b) return;
+    let out = b;
+    try {
+      const bytes = pngWithDpi(new Uint8Array(await b.arrayBuffer()), dpi);
+      out = new Blob([bytes], { type: 'image/png' });
+    } catch (e) { console.warn('PHYs non ajouté', e); }
+    download(out, `${state.outBlobName}-${dpi}dpi.png`);
+  }, 'image/png');
+});
+
 $('dlJpg').addEventListener('click', () => {
+  const dpi = currentDpi();
   const c = $('out');
   const flat = document.createElement('canvas');
   flat.width = c.width; flat.height = c.height;
   const x = flat.getContext('2d');
   x.fillStyle = '#fff'; x.fillRect(0, 0, flat.width, flat.height);
   x.drawImage(c, 0, 0);
-  flat.toBlob(b => download(b), 'image/jpeg', 0.95);
+  flat.toBlob(async (b) => {
+    if (!b) return;
+    let out = b;
+    try {
+      const bytes = jpegWithDpi(new Uint8Array(await b.arrayBuffer()), dpi);
+      out = new Blob([bytes], { type: 'image/jpeg' });
+    } catch (e) { console.warn('densité JFIF non ajoutée', e); }
+    download(out, `${state.outBlobName}-${dpi}dpi.jpg`);
+  }, 'image/jpeg', 0.97);
 });
 
 /* avis avant de quitter un calcul long */
 window.addEventListener('beforeunload', (e) => {
-  if ($('bar').style.display === 'block' && $('status').textContent.includes('Préparation')) e.preventDefault();
+  if ($('bar').style.display === 'block' && $('status').textContent.includes('Analyse')) e.preventDefault();
 });
 
+setMode('print');
 refreshGo();
 </script>
 </body>

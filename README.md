@@ -31,16 +31,24 @@ se teste sous Node :
 node tests/core.test.mjs
 ```
 
-## Dimensionner une impression
+## Impression
 
-Le nombre de cases est `colonnes × lignes`. À 300 dpi, une tuile de 48 px mesure 4 mm sur le papier :
-pour que chaque photo reste lisible de près, viser 10 à 15 mm par tuile.
+Le mode **Impression** raisonne en centimètres, pas en pixels : tu choisis le format (A4 → 100 × 150 cm,
+ou personnalisé), la résolution (240 / 300 / 360 dpi) et la taille de chaque photo sur le papier
+(10 à 25 mm). L'outil en déduit la grille, la taille du fichier et la mémoire nécessaire. Le tableau
+est recadré au centre pour remplir la feuille, jamais déformé.
 
-- 5 000 photos, grille 70 × 71 : 70 × 70 cm → tuiles de 10 mm, fichier 68 MP.
-- 5 000 photos, 70 × 100 cm → tuiles de 10 × 14 mm, fichier 98 MP.
-- 5 000 photos, 100 × 100 cm → tuiles de 14 mm, fichier 139 MP.
+Le fichier exporté porte sa résolution : chunk `pHYs` pour le PNG (300 dpi = 11 811 pixels par mètre),
+densité JFIF pour le JPEG. Sans cette métadonnée, un imprimeur lit le fichier à 72 dpi et l'imprime
+au quart de la taille demandée — c'est la raison d'être de ce mode.
 
-En dessous de 8 mm, les fragments deviennent du bruit.
+Repères pour 5 000 photos :
+
+- A2 à 300 dpi, photos de 15 mm : 4 956 × 7 013 px, grille 27 × 39 = 1 053 cases.
+- 70 × 70 cm à 300 dpi, photos de 10 mm : 8 268 × 8 268 px, 70 × 70 = 4 900 cases.
+- 70 × 100 cm à 300 dpi, photos de 12 mm : 8 268 × 11 811 px, 68 × 97 = 6 596 cases → prévoir plus de photos.
+
+En dessous de 8 mm par photo, les fragments deviennent du bruit à l'œil nu.
 
 ## Limites connues
 
