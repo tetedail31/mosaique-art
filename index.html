@@ -191,7 +191,7 @@
 </div>
 
 <script type="module">
-import { jpegWithDpi } from './mosaic-core.mjs';
+import { jpegWithDpi } from './mosaic-core.mjs?v=5';
 const WORKS = [
   { slug:'mona-lisa',    title:'La Joconde',                meta:'Léonard de Vinci · 1503' },
   { slug:'starry-night', title:'La Nuit étoilée',           meta:'Van Gogh · 1889' },
@@ -430,7 +430,7 @@ $('go').addEventListener('click', async () => {
   }
   const targetPixels = octx.getImageData(0, 0, W, H).data;
 
-  const worker = new Worker('./worker.mjs', { type: 'module' });
+  const worker = new Worker('./worker.mjs?v=5', { type: 'module' });
   const started = performance.now();
   worker.onmessage = (ev) => {
     const m = ev.data;

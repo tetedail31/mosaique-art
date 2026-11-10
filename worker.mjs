@@ -1,7 +1,7 @@
 // worker.mjs — deux passes : statistiques légères (64 px) puis décodage à la taille finale.
 // Cette séparation permet une tuile de 150 px (impression 300 dpi) sur 5 000 photos
 // sans garder 5 000 fragments en mémoire.
-import { tileStats, cellStats, solve, encodePng } from './mosaic-core.mjs';
+import { tileStats, cellStats, solve, encodePng } from './mosaic-core.mjs?v=5';
 
 self.onmessage = async (ev) => {
   if (ev.data && ev.data.cmd === 'export') {
