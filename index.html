@@ -258,9 +258,21 @@ function updateEstimate() {
   if (!n && !state.target) { el.textContent = ''; return; }
   if (!state.target) { el.innerHTML = `<b>${n}</b> photos · grille à définir`; return; }
   const missing = cells - n;
+  let hint = '';
+  if (n && missing > 0) {
+    const aspect = state.targetAspect || 1.25;
+    const { outW } = geometry();
+    const need = Math.max(1, Math.round(Math.sqrt(n * aspect))); // colonnes tiennent dans n photos
+    const fit = Math.floor(outW / need);
+    const options = [32, 40, 48, 64];
+    const sugg = options.find(o => o >= fit);
+    hint = sugg === undefined
+      ? ' → ajoute des photos'
+      : (sugg !== geometry().tilePx ? ` → tuile ${sugg} px` : ' → ajoute des photos');
+  }
   el.innerHTML = n
     ? `grille ${cols} × ${rows} = <b>${cells}</b> cases pour <b>${n}</b> photos` +
-      (missing > 0 ? ` · ${missing} réutilisation${missing > 1 ? 's' : ''}` : ' · toutes distinctes')
+      (missing > 0 ? ` · ${missing} réutilisation${missing > 1 ? 's' : ''}${hint}` : ' · toutes distinctes')
     : `grille ${cols} × ${rows} = <b>${cells}</b> cases`;
   el.style.color = missing > 0 ? 'var(--warn)' : 'var(--dim)';
 }
