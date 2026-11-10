@@ -4,6 +4,19 @@
 import { tileStats, cellStats, solve } from './mosaic-core.mjs';
 
 self.onmessage = async (ev) => {
+  if (ev.data && ev.data.cmd === 'export') {
+    const { type, quality } = ev.data;
+    const canvas = self.__canvas;
+    if (!canvas) { self.postMessage({ phase: 'exportError', message: 'aucun rendu en mémoire' }); return; }
+    try {
+      const blob = await canvas.convertToBlob({ type: type === 'jpeg' ? 'image/jpeg' : 'image/png', quality });
+      const buf = await blob.arrayBuffer();
+      self.postMessage({ phase: 'exported', type: type === 'jpeg' ? 'jpeg' : 'png', data: buf }, [buf]);
+    } catch (e) {
+      self.postMessage({ phase: 'exportError', message: e.message });
+    }
+    return;
+  }
   const { files, targetPixels, tilePx, cols, rows, unique, strength, blend } = ev.data;
   const post = (o, tr) => self.postMessage(o, tr || []);
   const W = cols * tilePx, H = rows * tilePx;
@@ -101,8 +114,24 @@ self.onmessage = async (ev) => {
     }
   }
 
+  /* ---- rendu final : le canvas reste dans le worker, la page ne reçoit qu'un aperçu ---- */
+  post({ phase: 'encode', done: 0, total: 1 });
+  const full = new OffscreenCanvas(W, H);
+  const fctx = full.getContext('2d');
+  fctx.putImageData(new ImageData(out, W, H), 0, 0);
+  self.__canvas = full;
+
+  const pw = Math.min(1100, W), ph = Math.max(1, Math.round(H * pw / W));
+  const pv = new OffscreenCanvas(pw, ph);
+  const pctx = pv.getContext('2d');
+  pctx.imageSmoothingEnabled = true;
+  pctx.imageSmoothingQuality = 'high';
+  pctx.drawImage(full, 0, 0, pw, ph);
+  const preview = pv.transferToImageBitmap();
+
   post({
-    phase: 'done', data: out.buffer, width: W, height: H,
+    phase: 'done', width: W, height: H, previewW: pw, previewH: ph,
     distinct: sol.distinct, reused: sol.reused, kept, failed, cells: cols * rows,
-  }, [out.buffer]);
+    preview,
+  }, [preview]);
 };

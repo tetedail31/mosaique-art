@@ -445,13 +445,17 @@ $('go').addEventListener('click', async () => {
       status.textContent = `Assemblage haute résolution : ${m.done} % · ${m.photos} photos à décoder`;
     } else if (m.phase === 'error') {
       status.textContent = m.message; btn.disabled = false; worker.terminate();
+    } else if (m.phase === 'encode') {
+      fill.style.width = '97%';
+      status.textContent = 'Préparation du rendu haute résolution…';
     } else if (m.phase === 'done') {
       fill.style.width = '100%';
-      const data = new ImageData(new Uint8ClampedArray(m.data), m.width, m.height);
-      const canvas = $('out');
-      canvas.width = m.width; canvas.height = m.height;
-      canvas.getContext('2d').putImageData(data, 0, 0);
+      const prev = $('out');
+      prev.width = m.previewW; prev.height = m.previewH;
+      prev.getContext('2d').drawImage(m.preview, 0, 0);
+      state.exportW = m.width; state.exportH = m.height;
       state.lastG = g;
+      state.worker = worker;
       $('resultCard').classList.add('result');
       $('resultCard').style.display = 'block';
       const secs = ((performance.now() - started) / 1000).toFixed(1);
@@ -460,13 +464,27 @@ $('go').addEventListener('click', async () => {
       if (g.mode === 'print') {
         $('sizes').innerHTML = `Fichier à <b>${g.dpi} dpi</b> : ${(m.width / g.dpi * 2.54).toFixed(1)} × ${(m.height / g.dpi * 2.54).toFixed(1)} cm ` +
           `(format demandé ${g.wcm} × ${g.hcm} cm). Chaque photo mesure ${(tilePx / g.dpi * 25.4).toFixed(1)} mm sur le papier.<br>` +
-          `La résolution est inscrite dans le fichier : l'imprimeur n'a rien à régler.`;
+          `La résolution est inscrite dans le fichier : l'imprimeur n'a rien à régler. L'aperçu est réduit, le fichier téléchargé est en pleine résolution.`;
       } else {
         $('sizes').textContent = `Image écran : ${m.width} × ${m.height} px. ` +
           `Pour l'impression, passe en mode Impression et choisis ton format.`;
       }
       $('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      btn.disabled = false; worker.terminate();
+      btn.disabled = false;
+    } else if (m.phase === 'exported') {
+      const dpi = currentDpi();
+      const type = m.type === 'jpeg' ? 'image/jpeg' : 'image/png';
+      let bytes = new Uint8Array(m.data);
+      try {
+        bytes = m.type === 'jpeg' ? jpegWithDpi(bytes, dpi) : pngWithDpi(bytes, dpi);
+      } catch (e) { console.warn('métadonnée de résolution non ajoutée', e); }
+      const blob = new Blob([bytes], { type });
+      download(blob, `${state.outBlobName}-${dpi}dpi.${m.type === 'jpeg' ? 'jpg' : 'png'}`);
+      $('status').textContent = `${m.type === 'jpeg' ? 'JPEG' : 'PNG'} prêt : ${(bytes.length / 1048576).toFixed(1)} Mo à ${dpi} dpi.`;
+      btn.disabled = false;
+    } else if (m.phase === 'exportError') {
+      $('status').textContent = 'Export impossible : ' + m.message;
+      btn.disabled = false;
     }
   };
   worker.onerror = (e) => {
@@ -501,37 +519,15 @@ function currentDpi() {
   return (state.lastG && state.lastG.mode === 'print') ? state.lastG.dpi : 300;
 }
 
-$('dlPng').addEventListener('click', () => {
-  const dpi = currentDpi();
-  $('out').toBlob(async (b) => {
-    if (!b) return;
-    let out = b;
-    try {
-      const bytes = pngWithDpi(new Uint8Array(await b.arrayBuffer()), dpi);
-      out = new Blob([bytes], { type: 'image/png' });
-    } catch (e) { console.warn('PHYs non ajouté', e); }
-    download(out, `${state.outBlobName}-${dpi}dpi.png`);
-  }, 'image/png');
-});
+function requestExport(type) {
+  if (!state.worker) { $('status').textContent = 'Génère d\'abord une mosaïque.'; return; }
+  $('go').disabled = true;
+  $('status').textContent = `Encodage ${type === 'jpeg' ? 'JPEG' : 'PNG'} pleine résolution… quelques secondes.`;
+  state.worker.postMessage({ cmd: 'export', type, quality: type === 'jpeg' ? 0.97 : undefined });
+}
 
-$('dlJpg').addEventListener('click', () => {
-  const dpi = currentDpi();
-  const c = $('out');
-  const flat = document.createElement('canvas');
-  flat.width = c.width; flat.height = c.height;
-  const x = flat.getContext('2d');
-  x.fillStyle = '#fff'; x.fillRect(0, 0, flat.width, flat.height);
-  x.drawImage(c, 0, 0);
-  flat.toBlob(async (b) => {
-    if (!b) return;
-    let out = b;
-    try {
-      const bytes = jpegWithDpi(new Uint8Array(await b.arrayBuffer()), dpi);
-      out = new Blob([bytes], { type: 'image/jpeg' });
-    } catch (e) { console.warn('densité JFIF non ajoutée', e); }
-    download(out, `${state.outBlobName}-${dpi}dpi.jpg`);
-  }, 'image/jpeg', 0.97);
-});
+$('dlPng').addEventListener('click', () => requestExport('png'));
+$('dlJpg').addEventListener('click', () => requestExport('jpeg'));
 
 /* avis avant de quitter un calcul long */
 window.addEventListener('beforeunload', (e) => {
