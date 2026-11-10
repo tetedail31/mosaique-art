@@ -191,7 +191,7 @@
 </div>
 
 <script type="module">
-import { pngWithDpi, jpegWithDpi } from './mosaic-core.mjs';
+import { jpegWithDpi } from './mosaic-core.mjs';
 const WORKS = [
   { slug:'mona-lisa',    title:'La Joconde',                meta:'Léonard de Vinci · 1503' },
   { slug:'starry-night', title:'La Nuit étoilée',           meta:'Van Gogh · 1889' },
@@ -475,9 +475,9 @@ $('go').addEventListener('click', async () => {
       const dpi = currentDpi();
       const type = m.type === 'jpeg' ? 'image/jpeg' : 'image/png';
       let bytes = new Uint8Array(m.data);
-      try {
-        bytes = m.type === 'jpeg' ? jpegWithDpi(bytes, dpi) : pngWithDpi(bytes, dpi);
-      } catch (e) { console.warn('métadonnée de résolution non ajoutée', e); }
+      if (m.type === 'jpeg') {                 // le PNG sort déjà avec son pHYs du worker
+        try { bytes = jpegWithDpi(bytes, dpi); } catch (e) { console.warn('densité JFIF non ajoutée', e); }
+      }
       const blob = new Blob([bytes], { type });
       download(blob, `${state.outBlobName}-${dpi}dpi.${m.type === 'jpeg' ? 'jpg' : 'png'}`);
       $('status').textContent = `${m.type === 'jpeg' ? 'JPEG' : 'PNG'} prêt : ${(bytes.length / 1048576).toFixed(1)} Mo à ${dpi} dpi.`;
@@ -523,7 +523,7 @@ function requestExport(type) {
   if (!state.worker) { $('status').textContent = 'Génère d\'abord une mosaïque.'; return; }
   $('go').disabled = true;
   $('status').textContent = `Encodage ${type === 'jpeg' ? 'JPEG' : 'PNG'} pleine résolution… quelques secondes.`;
-  state.worker.postMessage({ cmd: 'export', type, quality: type === 'jpeg' ? 0.97 : undefined });
+  state.worker.postMessage({ cmd: 'export', type, quality: type === 'jpeg' ? 0.97 : undefined, dpi: currentDpi() });
 }
 
 $('dlPng').addEventListener('click', () => requestExport('png'));

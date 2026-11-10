@@ -220,6 +220,62 @@ export function readPngDpi(bytes) {
 }
 
 /**
+ * Encode un PNG RVB(A) sans passer par un canvas : indispensable au-delà de ~20 MP,
+ * où la rasterisation logicielle du navigateur bloque l'onglet.
+ * Filtre « Up » (2) sur chaque ligne, compression native via CompressionStream('deflate').
+ */
+export async function encodePng(rgba, width, height, dpi) {
+  if (typeof CompressionStream !== 'function') throw new Error('CompressionStream indisponible');
+  const stride = width * 4;
+  const filtered = new Uint8Array(height * (stride + 1));
+  for (let y = 0; y < height; y++) {
+    const src = y * stride, dst = y * (stride + 1);
+    filtered[dst] = 2;                       // filtre Up
+    if (y === 0) {
+      filtered.set(rgba.subarray(src, src + stride), dst + 1);
+    } else {
+      const prev = (y - 1) * stride;
+      for (let i = 0; i < stride; i++) {
+        filtered[dst + 1 + i] = (rgba[src + i] - rgba[prev + i]) & 0xFF;
+      }
+    }
+  }
+  const cs = new CompressionStream('deflate');
+  const writer = cs.writable.getWriter();
+  writer.write(filtered);
+  writer.close();
+  const blocks = [];
+  const reader = cs.readable.getReader();
+  let total = 0;
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    blocks.push(value); total += value.length;
+  }
+  const idat = new Uint8Array(total);
+  let off = 0;
+  for (const b of blocks) { idat.set(b, off); off += b.length; }
+
+  const ihdr = new Uint8Array(13);
+  const set32 = (arr, o, v) => { arr[o] = (v >>> 24) & 255; arr[o + 1] = (v >>> 16) & 255; arr[o + 2] = (v >>> 8) & 255; arr[o + 3] = v & 255; };
+  set32(ihdr, 0, width); set32(ihdr, 4, height);
+  ihdr[8] = 8; ihdr[9] = 6; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
+  const ppu = Math.round(dpi / 0.0254);
+  const phys = new Uint8Array(9);
+  set32(phys, 0, ppu); set32(phys, 4, ppu); phys[8] = 1;
+
+  const parts = [
+    Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    chunk('IHDR', ihdr), chunk('pHYs', phys), chunk('sRGB', Uint8Array.of(0)),
+    chunk('IDAT', idat), chunk('IEND', new Uint8Array(0)),
+  ];
+  const out = new Uint8Array(parts.reduce((a, b) => a + b.length, 0));
+  let o = 0;
+  for (const b of parts) { out.set(b, o); o += b.length; }
+  return out;
+}
+
+/**
  * Compose le rendu : transfert moyenne/écart-type par case, puis mélange avec le fragment brut.
  * tiles : Array<Uint8ClampedArray(tilePx*tilePx*4)> ; means/stds : Array<[3]> par fragment.
  */

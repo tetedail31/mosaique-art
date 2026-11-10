@@ -138,4 +138,43 @@ ok('JPEG sans APP0 : en-tête inséré', j2[2] === 0xFF && j2[3] === 0xE0);
 ok('JPEG sans APP0 : densité X = 240', (j2[14] << 8 | j2[15]) === 240);
 ok('JPEG : SOS préservé', j2.includes(0xDA));
 
+/* 10. encodeur PNG autonome (impression sans canvas) */
+import { encodePng } from '../mosaic-core.mjs';
+
+const W3 = 3, H2 = 2;
+const rgba = new Uint8Array(W3 * H2 * 4);
+for (let i = 0; i < W3 * H2; i++) {
+  rgba[i * 4] = (i * 40) & 255; rgba[i * 4 + 1] = (255 - i * 30) & 255;
+  rgba[i * 4 + 2] = (i * 11) & 255; rgba[i * 4 + 3] = 255;
+}
+const encoded = await encodePng(rgba, W3, H2, 300);
+ok('PNG encodeur : signature', encoded[0] === 137 && encoded[1] === 80);
+near(readPngDpi(encoded), 300, 0.5, 'PNG encodeur : 300 dpi déclarés');
+
+// structure + dimensions + retour des pixels
+let q = 8, idat = null, dims = null;
+while (q < encoded.length) {
+  const len = (encoded[q] << 24 | encoded[q + 1] << 16 | encoded[q + 2] << 8 | encoded[q + 3]) >>> 0;
+  const t = String.fromCharCode(encoded[q + 4], encoded[q + 5], encoded[q + 6], encoded[q + 7]);
+  if (t === 'IHDR') dims = [(encoded[q + 8] << 24 | encoded[q + 9] << 16 | encoded[q + 10] << 8 | encoded[q + 11]) >>> 0,
+                            (encoded[q + 12] << 24 | encoded[q + 13] << 16 | encoded[q + 14] << 8 | encoded[q + 15]) >>> 0];
+  if (t === 'IDAT') idat = encoded.subarray(q + 8, q + 8 + len);
+  q += 12 + len;
+}
+ok('PNG encodeur : dimensions 3x2', dims && dims[0] === 3 && dims[1] === 2);
+const raw = zlib.inflateSync(Buffer.from(idat));
+ok('PNG encodeur : taille des scanlines', raw.length === H2 * (W3 * 4 + 1));
+ok('PNG encodeur : filtre Up', raw[0] === 2 && raw[W3 * 4 + 1] === 2);
+let firstRowOk = true;
+for (let i = 0; i < W3 * 4; i++) if (raw[1 + i] !== rgba[i]) firstRowOk = false;
+ok('PNG encodeur : première ligne identique', firstRowOk);
+let upOk = true;
+for (let y = 1; y < H2; y++) {
+  for (let i = 0; i < W3 * 4; i++) {
+    const expected = (rgba[y * W3 * 4 + i] - rgba[(y - 1) * W3 * 4 + i]) & 0xFF;
+    if (raw[y * (W3 * 4 + 1) + 1 + i] !== expected) upOk = false;
+  }
+}
+ok('PNG encodeur : filtre Up réversible', upOk);
+
 console.log(`\n${pass} assertions passées`);

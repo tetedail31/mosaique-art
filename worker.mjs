@@ -1,17 +1,26 @@
 // worker.mjs — deux passes : statistiques légères (64 px) puis décodage à la taille finale.
 // Cette séparation permet une tuile de 150 px (impression 300 dpi) sur 5 000 photos
 // sans garder 5 000 fragments en mémoire.
-import { tileStats, cellStats, solve } from './mosaic-core.mjs';
+import { tileStats, cellStats, solve, encodePng } from './mosaic-core.mjs';
 
 self.onmessage = async (ev) => {
   if (ev.data && ev.data.cmd === 'export') {
-    const { type, quality } = ev.data;
-    const canvas = self.__canvas;
-    if (!canvas) { self.postMessage({ phase: 'exportError', message: 'aucun rendu en mémoire' }); return; }
+    const { type, quality, dpi } = ev.data;
+    if (!self.__dims) { self.postMessage({ phase: 'exportError', message: 'aucun rendu en mémoire' }); return; }
+    const { W, H } = self.__dims;
     try {
-      const blob = await canvas.convertToBlob({ type: type === 'jpeg' ? 'image/jpeg' : 'image/png', quality });
-      const buf = await blob.arrayBuffer();
-      self.postMessage({ phase: 'exported', type: type === 'jpeg' ? 'jpeg' : 'png', data: buf }, [buf]);
+      if (type === 'jpeg') {
+        if (!self.__canvas || W * H > 20e6) {
+          self.postMessage({ phase: 'exportError', message: 'JPEG impossible à cette taille, utilise le PNG' });
+          return;
+        }
+        const blob = await self.__canvas.convertToBlob({ type: 'image/jpeg', quality });
+        const buf = await blob.arrayBuffer();
+        self.postMessage({ phase: 'exported', type: 'jpeg', data: buf }, [buf]);
+      } else {
+        const bytes = await encodePng(self.__rgba, W, H, dpi || 300);
+        self.postMessage({ phase: 'exported', type: 'png', data: bytes.buffer }, [bytes.buffer]);
+      }
     } catch (e) {
       self.postMessage({ phase: 'exportError', message: e.message });
     }
@@ -122,6 +131,8 @@ self.onmessage = async (ev) => {
     const fctx = full.getContext('2d');
     fctx.putImageData(new ImageData(out, W, H), 0, 0);
     self.__canvas = full;
+    self.__rgba = out;
+    self.__dims = { W, H };
     post({ phase: 'encode', step: 'canvas peint' });
 
     const pw = Math.min(1100, W), ph = Math.max(1, Math.round(H * pw / W));
