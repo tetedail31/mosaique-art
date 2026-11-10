@@ -1,0 +1,110 @@
+[
+ {
+  "slug": "mona-lisa",
+  "title": "File:Mona Lisa, by Leonardo da Vinci, from C2RMF retouched.jpg",
+  "artist": "<bdi><a href=\"https://en.wikipedia.org/wiki/en:Leonardo_da_Vinci\" class=\"extiw\" title=\"w:en:Leonardo da Vinci\"><span title=\"Italian Renaissance polymath (1452−1519)\">Leonardo da Vinci</span></a></bdi>",
+  "year": "between 1503 and 1506<div style=\"display: none;\">date QS:P,+1503-00-00T00:00:00Z/8,P1319,+1503-00-00T00:00:00Z/9,P1326,+1506-00-00T00:00:00Z/9</div> <span class=\"mw-valign-text-top noprint\" typeof=\"mw:File/Frameless\"><a href=\"https://www.wikidata.org/wiki/Q12418#P571\" title=\"Edit this at Wikidata\"><img alt=\"Edit this at Wikidata\" src=\"https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8a/OOjs_UI_icon_edit-ltr-progressive.svg/20px-OOjs_UI_icon_edit-ltr-progressive.svg.png?utm_source=commons.wikimedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail\" decoding=\"async\" loading=\"lazy\" width=\"10\" height=\"10\" class=\"mw-file-element\" data-file-width=\"20\" data-file-height=\"20\"></a></span>",
+  "file": "mona-lisa.jpg",
+  "http": "200",
+  "bytes": 980329
+ },
+ {
+  "slug": "starry-night",
+  "title": "File:VanGogh-starry night ballance1.jpg",
+  "artist": "<bdi><a href=\"https://en.wikipedia.org/wiki/en:Vincent_van_Gogh\" class=\"extiw\" title=\"w:en:Vincent van Gogh\"><span title=\"Dutch painter (1853–1890)\">Vincent van Gogh</span></a></bdi>",
+  "year": "1889<div style=\"display: none;\">date QS:P571,+1889-00-00T00:00:00Z/9</div>",
+  "file": "starry-night.jpg",
+  "http": "200",
+  "bytes": 611550
+ },
+ {
+  "slug": "pearl",
+  "title": "File:1665 Girl with a Pearl Earring.jpg",
+  "artist": "<bdi><a href=\"https://en.wikipedia.org/wiki/en:Johannes_Vermeer\" class=\"extiw\" title=\"w:en:Johannes Vermeer\"><span title=\"Dutch painter (1632–1675)\">Johannes Vermeer</span></a></bdi>",
+  "year": "1665",
+  "file": "pearl.jpg",
+  "http": "200",
+  "bytes": 594446
+ },
+ {
+  "slug": "great-wave",
+  "title": "File:Tsunami by hokusai 19th century.jpg",
+  "artist": "<bdi><a href=\"https://en.wikipedia.org/wiki/en:Hokusai\" class=\"extiw\" title=\"w:en:Hokusai\"><span title=\"Japanese artist (1760-1849)\">Katsushika Hokusai</span></a></bdi>",
+  "year": "First publication:  between circa 1830 and circa 1832<div style=\"display: none;\">date QS:P571,+1830-00-00T00:00:00Z/8,P1319,+1830-00-00T00:00:00Z/9,P1326,+1832-00-00T00:00:00Z/9,P1480,Q5727902</div>.<br>",
+  "file": "great-wave.jpg",
+  "http": "200",
+  "bytes": 444875
+ },
+ {
+  "slug": "venus",
+  "title": "File:Sandro Botticelli 046.jpg",
+  "artist": "<bdi><a href=\"https://en.wikipedia.org/wiki/en:Sandro_Botticelli\" class=\"extiw\" title=\"w:en:Sandro Botticelli\"><span title=\"Italian painter (1445–1510)\">Sandro Botticelli</span></a></bdi>",
+  "year": "1485",
+  "file": "venus.jpg",
+  "http": "200",
+  "bytes": 320213
+ },
+ {
+  "slug": "kiss",
+  "title": "File:The Kiss - Gustav Klimt - Google Cultural Institute.jpg",
+  "artist": "<bdi><a href=\"https://en.wikipedia.org/wiki/en:Gustav_Klimt\" class=\"extiw\" title=\"w:en:Gustav Klimt\"><span title=\"Austrian symbolist painter (1862–1918)\">Gustav Klimt</span></a></bdi>",
+  "year": "1907–1908",
+  "file": "kiss.jpg",
+  "http": "200",
+  "bytes": 715229
+ },
+ {
+  "slug": "scream",
+  "title": "File:Edvard Munch, 1893, The Scream, oil, tempera and pastel on cardboard, 91 x 73 cm, National Gallery of Norway.jpg",
+  "artist": "<bdi><a href=\"https://en.wikipedia.org/wiki/en:Edvard_Munch\" class=\"extiw\" title=\"w:en:Edvard Munch\"><span title=\"Norwegian painter (1863–1944)\">Edvard Munch</span></a></bdi>",
+  "year": "1893 <span class=\"mw-valign-text-top noprint\" typeof=\"mw:File/Frameless\"><a href=\"https://www.wikidata.org/wiki/Q18891156#P571\" title=\"Edit this at Wikidata\"><img alt=\"Edit this at Wikidata\" src=\"https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8a/OOjs_UI_icon_edit-ltr-progressive.svg/20px-OOjs_UI_icon_edit-ltr-progressive.svg.png?utm_source=commons.wikimedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail\" decoding=\"async\" loading=\"lazy\" width=\"10\" height=\"10\" class=\"mw-file-element\" data-file-width=\"20\" data-file-height=\"20\"></a></span>",
+  "file": "scream.jpg",
+  "http": "200",
+  "bytes": 622974
+ },
+ {
+  "slug": "gothic",
+  "title": "File:Grant DeVolson Wood - American Gothic.jpg",
+  "artist": "<bdi><a href=\"https://en.wikipedia.org/wiki/en:Grant_Wood\" class=\"extiw\" title=\"w:en:Grant Wood\"><span title=\"American painter (1891–1942)\">Grant Wood</span></a></bdi>",
+  "year": "1930<div style=\"display: none;\">date QS:P571,+1930-00-00T00:00:00Z/9</div>",
+  "file": "gothic.jpg",
+  "http": "200",
+  "bytes": 628187
+ },
+ {
+  "slug": "liberty",
+  "title": "File:Eugène Delacroix - La liberté guidant le peuple.jpg",
+  "artist": "<bdi><a href=\"https://en.wikipedia.org/wiki/en:Eug%C3%A8ne_Delacroix\" class=\"extiw\" title=\"w:en:Eugène Delacroix\"><span title=\"French painter (1798–1863)\">Eugène Delacroix</span></a></bdi>",
+  "year": "between October 1830 and December 1830<div style=\"display: none;\">date QS:P,+1830-00-00T00:00:00Z/9,P1319,+1830-10-00T00:00:00Z/10,P1326,+1830-12-00T00:00:00Z/10</div> <span class=\"mw-valign-text-top noprint\" typeof=\"mw:File/Frameless\"><a href=\"https://www.wikidata.org/wiki/Q29530#P571\" title=\"Edit this at Wikidata\"><img alt=\"Edit this at Wikidata\" src=\"https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8a/OOjs_UI_icon_edit-ltr-progressive.svg/20px-OOjs_UI_icon_edit-ltr-progressive.svg.png?utm_source=commons.wikimedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail\" decoding=\"async\" loading=\"lazy\" width=\"10\" height=\"10\" class=\"mw-file-element\" data-file-width=\"20\" data-file-height=\"20\"></a></span><br><a href=\"https://en.wikipedia.org/wiki/en:Romanticism\" class=\"extiw\" title=\"w:en:Romanticism\"><span title=\"artistic, literary, musical, and intellectual movement\">Romanticism</span></a> (second half of 18<sup>th</sup> century<div style=\"display: none;\">date QS:P,+1750-00-00T00:00:00Z/7,P4241,Q40719707</div>–first half of 19<sup>th</sup> century<div style=\"display: none;\">date QS:P,+1850-00-00T00:00:00Z/7,P4241,Q40719687</div>) <span class=\"mw-valign-text-top noprint\" typeof=\"mw:File/Frameless\"><a href=\"https://www.wikidata.org/wiki/Q29530#P2348\" title=\"Edit this at Wikidata\"><img alt=\"Edit this at Wikidata\" src=\"https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8a/OOjs_UI_icon_edit-ltr-progressive.svg/20px-OOjs_UI_icon_edit-ltr-progressive.svg.png?utm_source=commons.wikimedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail\" decoding=\"async\" loading=\"lazy\" width=\"10\" height=\"10\" class=\"mw-file-element\" data-file-width=\"20\" data-file-height=\"20\"></a></span>",
+  "file": "liberty.jpg",
+  "http": "200",
+  "bytes": 439443
+ },
+ {
+  "slug": "night-watch",
+  "title": "File:La ronda de noche, por Rembrandt van Rijn.jpg",
+  "artist": "<bdi><a href=\"https://en.wikipedia.org/wiki/en:Rembrandt\" class=\"extiw\" title=\"w:en:Rembrandt\"><span title=\"Dutch painter and printmaker (1606–1669)\">Rembrandt</span></a></bdi>",
+  "year": "1642 <span class=\"mw-valign-text-top noprint\" typeof=\"mw:File/Frameless\"><a href=\"https://www.wikidata.org/wiki/Q219831#P571\" title=\"Edit this at Wikidata\"><img alt=\"Edit this at Wikidata\" src=\"https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8a/OOjs_UI_icon_edit-ltr-progressive.svg/20px-OOjs_UI_icon_edit-ltr-progressive.svg.png?utm_source=commons.wikimedia.org&amp;utm_campaign=parser&amp;utm_content=thumbnail\" decoding=\"async\" loading=\"lazy\" width=\"10\" height=\"10\" class=\"mw-file-element\" data-file-width=\"20\" data-file-height=\"20\"></a></span>",
+  "file": "night-watch.jpg",
+  "http": "200",
+  "bytes": 322117
+ },
+ {
+  "slug": "meninas",
+  "title": "File:Las Meninas, by Diego Velázquez, from Prado in Google Earth.jpg",
+  "artist": "<bdi><a href=\"https://en.wikipedia.org/wiki/en:Diego_Vel%C3%A1zquez\" class=\"extiw\" title=\"w:en:Diego Velázquez\"><span title=\"Spanish painter (1599–1660)\">Diego Velázquez</span></a></bdi>",
+  "year": "between 1656 and 1657<div style=\"display: none;\">date QS:P571,+1656-00-00T00:00:00Z/8,P1319,+1656-00-00T00:00:00Z/9,P1326,+1657-00-00T00:00:00Z/9</div>",
+  "file": "meninas.jpg",
+  "http": "200",
+  "bytes": 364585
+ },
+ {
+  "slug": "water-lilies",
+  "title": "File:Claude Monet - Water Lilies - 1906, Ryerson.jpg",
+  "artist": "<bdi><a href=\"https://en.wikipedia.org/wiki/en:Claude_Monet\" class=\"extiw\" title=\"w:en:Claude Monet\"><span title=\"French painter (1840–1926)\">Claude Monet</span></a></bdi>",
+  "year": "1906<div style=\"display: none;\">date QS:P571,+1906-00-00T00:00:00Z/9</div>",
+  "file": "water-lilies.jpg",
+  "http": "200",
+  "bytes": 723038
+ }
+]
