@@ -158,7 +158,7 @@ const WORKS = [
 ];
 
 const $ = (id) => document.getElementById(id);
-const state = { files: [], target: null, outBlobName: 'mosaique' };
+const state = { files: [], target: null, targetAspect: 1.25, outBlobName: 'mosaique' };
 
 /* ---------- photos ---------- */
 const drop = $('drop'), fileInput = $('files');
@@ -194,8 +194,7 @@ function renderFiles() {
     d.className = 'more'; d.textContent = `+${n - 24}`;
     box.appendChild(d);
   }
-  $('estimate').classList.toggle('hidden', !n);
-  $('estimate').textContent = n ? `${n} fragments disponibles` : '';
+  updateEstimate();
   refreshGo();
 }
 
@@ -221,6 +220,10 @@ function selectWork(btn, target) {
   $('ownName').classList.toggle('hidden', target.slug !== 'custom');
   $('ownName').textContent = target.slug === 'custom' ? 'image importée' : '';
   state.outBlobName = 'mosaique-' + target.slug;
+  loadImage(target.src)
+    .then(im => { state.targetAspect = im.naturalWidth / im.naturalHeight; })
+    .catch(() => { state.targetAspect = 1.25; })
+    .finally(() => { updateEstimate(); refreshGo(); });
   refreshGo();
 }
 
@@ -234,6 +237,8 @@ $('targetFile').addEventListener('change', e => {
 
 /* ---------- réglages ---------- */
 $('strength').addEventListener('input', e => { $('strengthVal').textContent = e.target.value + ' %'; });
+['outW', 'tilePx', 'unique'].forEach(id =>
+  $(id).addEventListener('change', () => { updateEstimate(); refreshGo(); }));
 
 function geometry() {
   const outW = +$('outW').value, tilePx = +$('tilePx').value;
@@ -241,13 +246,33 @@ function geometry() {
   return { outW, tilePx, cols };
 }
 
+/** Aperçu du nombre de cases et de la pression sur le jeu de photos. */
+function updateEstimate() {
+  const { cols } = geometry();
+  const aspect = state.targetAspect || 1.25;
+  const rows = Math.max(1, Math.round(cols / aspect));
+  const cells = cols * rows;
+  const n = state.files.length;
+  const el = $('estimate');
+  el.classList.toggle('hidden', !(n || state.target));
+  if (!n && !state.target) { el.textContent = ''; return; }
+  if (!state.target) { el.innerHTML = `<b>${n}</b> photos · grille à définir`; return; }
+  const missing = cells - n;
+  el.innerHTML = n
+    ? `grille ${cols} × ${rows} = <b>${cells}</b> cases pour <b>${n}</b> photos` +
+      (missing > 0 ? ` · ${missing} réutilisation${missing > 1 ? 's' : ''}` : ' · toutes distinctes')
+    : `grille ${cols} × ${rows} = <b>${cells}</b> cases`;
+  el.style.color = missing > 0 ? 'var(--warn)' : 'var(--dim)';
+}
+
 function refreshGo() {
   const ok = state.files.length > 0 && state.target;
   const go = $('go');
   go.disabled = !ok;
-  const { cols, tilePx } = geometry();
+  const { cols } = geometry();
+  const rows = Math.max(1, Math.round(cols / (state.targetAspect || 1.25)));
   go.textContent = ok
-    ? `Générer la mosaïque · ${cols} colonnes`
+    ? `Générer la mosaïque · ${cols} × ${rows} cases`
     : (!state.files.length ? 'Ajoute tes photos' : 'Choisis un tableau');
 }
 
